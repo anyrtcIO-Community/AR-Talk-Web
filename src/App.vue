@@ -283,10 +283,10 @@ export default {
     
     let rtcMax = that.rtcMax = new RTMaxKit();
     //前往平台获取配置开发者信息
-    let DEV_ID = "95878050";
-    let APP_ID = "anyrtcLIlWYI5GIXsN";
-    let APP_KEY = "RJdvYj8pnYFG5E1GBcZ3SEBkeRZxOXvNu12KQHYYO+4";
-    let APP_TOKEN = "b0b5e7baa78a310fa183448c39791f8b";
+    let DEV_ID = "";
+    let APP_ID = "";
+    let APP_KEY = "";
+    let APP_TOKEN = "";
     let APP_DOMAIN = "";
 
     rtcMax.initEngineWithAnyRTCInfo(DEV_ID, APP_ID, APP_KEY, APP_TOKEN, APP_DOMAIN);
