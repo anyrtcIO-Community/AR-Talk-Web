@@ -138,6 +138,24 @@
 		this.timeTalkOperation = 0;
 		this.timeTalkRelease = 0;
 		this.timeTalkP2pRelease = 0;
+    this.offLineHandler = function () {
+        Logcat("Network disconnected.");
+        XMLHttp.queueClear();
+        that.my_id = "";
+        that.isTalkApplying = false;
+        that.isTalkOn = false;
+        that.isTalkP2P = false;
+        that.isPublished = false;
+        that.timeTalkOperation = 0;
+        that.callId = "";
+        that.callType = 0;
+        that.callTypeMap = {};
+        that.anyRTC.destroyAll();
+        //监听网络断网
+        window.removeEventListener('offline', that.offLineHandler, true);
+        // 断网
+        that.emit("onRTCLeaveTalkGroup", 101/*AnyRTC_NET_DISSCONNECT*/);
+    };
 
 		//房间ID
 		this.anyrtcId = "";
@@ -165,6 +183,7 @@
 		this.pubRtcOptType = {};    // 记录pubId对应的类型
 		this.pubRtcPeerID = {};     // 记录pubId对应的rtcPeerID
 		this.pubRtcUserdata = {};   // 记录pubId对应的userData
+		this.pubRender = {};
 
 		//
 		this.version = "v2.2.4";
@@ -181,42 +200,70 @@
 		this.anyRTC.on('stream_create_error', function (nErrorCode) {
 			that.emit("onSetLocalVideoCapturerResult", nErrorCode);
 		});
-		this.anyRTC.on('onRemoteStream', function (stream, pubId) {
-			var rtcPeerID = "";
-			for(var pid in that.pubRtcPeerID) {
-				if (pid == pubId) {
-					rtcPeerID = that.pubRtcPeerID[pid];
-					break;
-				}
-			}
-			/**
-			 *	返回pubId对应的eperId
-			 */
-			var optType = that.pubRtcOptType[pubId];
-			if (optType == undefined) {
-				optType = 0;
-			}
-			/**
-			 *	返回pubId对应的eperId
-			 */
-			// that.emit('onRTCRemoteStream', stream, rtcPeerID);   //单人双流，使用rtcPeerID会导致只能显示一路流（id容器重复）
-			that.emit('onRTCRemoteStream', stream, pubId, optType);
+		// this.anyRTC.on('onRemoteStream', function (stream, pubId) {
+		// 	var rtcPeerID = "";
+		// 	for(var pid in that.pubRtcPeerID) {
+		// 		if (pid == pubId) {
+		// 			rtcPeerID = that.pubRtcPeerID[pid];
+		// 			break;
+		// 		}
+		// 	}
+		// 	/**
+		// 	 *	返回pubId对应的eperId
+		// 	 */
+		// 	// that.emit('onRTCRemoteStream', stream, rtcPeerID);   //单人双流，使用rtcPeerID会导致只能显示一路流（id容器重复）
+		// 	that.emit('onRTCRemoteStream', stream, pubId);
+		// });
+		this.anyRTC.on('onRemoteVideoStream', function (stream, pubId) {
+			var videoStream = stream.clone();
+			var video = document.createElement('video');
+			video.setAttribute("autoplay", "");
+			video.setAttribute("playsinline", "");
+			video.setAttribute("muted", "");
+			video.muted = true;
+			video.style.width = "100%";
+			video.style.width = "100%";
+			video.style.height = "100%";
+			video.srcObject = videoStream;
+			video.addEventListener("loadedmetadata", function () {
+	          if (this.videoWidth > this.videoHeight) {
+	            video.style.objectFit = "cover";
+	            video.style.height = "auto";
+	          }
+	        });
+	        
+			that.pubRender[pubId] && that.pubRender[pubId].appendChild(video);
+		});
+		this.anyRTC.on('onRemoteAudioStream', function (stream, pubId) {
+			var videoStream = stream.clone();
+			var audio = document.createElement('audio');
+			audio.setAttribute("autoplay", "");
+			audio.setAttribute("playsinline", "");
+			audio.srcObject = videoStream;
+
+			that.pubRender[pubId] && that.pubRender[pubId].appendChild(audio);
 		});
 		this.anyRTC.on('onSendToPeer', function (chanId, jstr) {
 			that.sendToPeer(chanId, jstr);
 		});
 		this.anyRTC.on("onMemberJoin", function (pubId) {
-			var dRander;
+			// var dRander;
 
-			if (pubId[4] === '1') {
-				dRander = document.createElement('audio');
-			} else {
-				dRander = document.createElement('video');
-			}
+			// if (pubId[4] === '1') {
+			// 	dRander = document.createElement('audio');
+			// } else {
+			// 	dRander = document.createElement('video');
+			// }
 
-			dRander.style.width = 'auto';
-			dRander.style.height = '100%';
-			dRander.autoplay = 'autoplay';
+			// dRander.style.width = 'auto';
+			// dRander.style.height = '100%';
+			// dRander.autoplay = 'autoplay';
+
+			var dRander = document.createElement("div");
+			dRander.style.position = "relative";
+			dRander.style.width = "100%";
+			dRander.style.height = "100%";
+			that.pubRender[pubId] = dRander;
 
 			var rtcPeerID = "";
 			for(var pid in that.pubRtcPeerID) {
@@ -239,7 +286,7 @@
 			if (optType == undefined) {
 				optType = 0;
 			}
-			that.emit('onRTCOpenVideoRender', pubId, dRander, rtcUserData, optType); // strUserData
+			that.emit('onRTCOpenVideoRender', pubId, that.pubRender[pubId], rtcUserData, optType); // strUserData
 		});
 		this.anyRTC.on("onMemberLeave", function (pubId) {
 			var rtcPeerID = "";
@@ -249,7 +296,10 @@
 					break;
 				}
 			}
-			/**
+
+			delete that.pubRender[pubId];
+
+      /**
 			 *	返回pubId对应的eperId
 			 */
 			var optType = that.pubRtcOptType[pubId];
@@ -276,6 +326,9 @@
 									that.my_id = jsResp.DyncID;
 									that.startHangingGet();
 									request = null;
+                  
+                  //监听网络断网
+                  window.addEventListener('offline', that.offLineHandler, true);
 								}
 								else {
 									/**
@@ -691,10 +744,11 @@
 												 *  结束对讲回调
 												 *  @params nCode							错误码 0：正常退出对讲；其他参考错误码
 												 *  @params strUserId         用户id
-												 * 
+												 *  @params strUserData       自定义用户数据
 												 * 其他人结束对讲或发起对讲失败的回调。
 												 **/
 												that.emit("onRTCTalkClosed", jsBody.Code);
+												//that.releaseStream();
 											}
 										}
 										else if (jsBody.CMD == "TalkCancel") {
@@ -713,6 +767,7 @@
 												 * 其他人结束对讲或发起对讲失败的回调。
 												 **/
 												that.emit("onRTCTalkClosed", 811/*RTCTalk_BREAKED*/, strUserId, strUserData);
+												//that.releaseStream();
 											}
 										}
 										else if (jsBody.CMD == "NotifyOnTalk") {
@@ -733,6 +788,7 @@
 													 * 其他人结束对讲或发起对讲失败的回调。
 													 **/
 													that.emit("onRTCTalkClosed", 810/*RTCTalk_ROBBED*/, strUserId, strUserData);
+													//that.releaseStream();
 												}
 												/**
 												 *  其他人正在对讲组中讲话回调
@@ -755,6 +811,7 @@
 											 * 其他人结束对讲或发起对讲失败的回调。
 											 **/
 											that.emit("onRTCTalkClosed", 0/*OK*/, strUserId, strUserData);
+											//that.releaseStream();
 										}
 										else if (jsBody.CMD == "TalkP2P") {
 											Logcat("TalkP2P callback");
@@ -814,7 +871,7 @@
 											that.emit("onRTCVideoMonitorClose", jsBody.UserId, jsBody.UserData ? jsBody.UserData : "{}");
 										}
 										else if (jsBody.CMD == "VideoMonitorResult") {
-											Logcat("onRTCVideoMonitorResult => ", jsBody);
+                      Logcat("onRTCVideoMonitorResult => " + jsBody.Code);
 											/**
 											 * 发起视频监看结果回调
 											 * @strUserId
@@ -863,13 +920,15 @@
 											}
 
 											if (that.callTypeMap[jsBody.CallId] != undefined) {
-												/**
-												 * 被叫方收到主叫方挂断通话回调
-												 * @strCallId
-												 * @strUserId
-												 * @nCode
-												 **/
-												that.emit("onRTCEndCall", jsBody.CallId, jsBody.UserId, jsBody.Code);
+                        /**
+                         * 被叫方收到主叫方挂断通话回调
+                         * @strCallId
+                         * @strCallType
+                         * @strUserId
+                         * @nCode
+                         **/
+                        that.emit("onRTCEndCall", jsBody.CallId, that.callTypeMap[jsBody.CallId], jsBody.UserId, jsBody.Code);
+												//that.releaseStream();
 												delete that.callTypeMap[jsBody.CallId];
 											}
 										}
@@ -931,7 +990,7 @@
 											}
 
 											if (that.callTypeMap[jsBody.CallId] != undefined) {
-												that.emit("onRTCReleaseCall", jsBody.CallId);
+                        that.emit("onRTCReleaseCall", jsBody.CallId, that.callTypeMap[jsBody.CallId]);
 												delete that.callTypeMap[jsBody.CallId];
 											}
 										}
@@ -979,7 +1038,14 @@
 			} catch (e) {
 				Logcat("Hanging error " + e.description + " e: " + e);
 			}
-		}
+		};
+
+		this.releaseStream = function () {
+			//释放音视频
+			that.localStream && that.localStream.getTracks().forEach(function (track) {
+				track.stop();
+			});
+		};
 	}
 
 	//继承自事件处理器，提供绑定事件和触发事件的功能
@@ -1073,12 +1139,20 @@
 		var ishttps = 'https:' == document.location.protocol ? true : false;
 		if (ishttps) {
 			if (nPort) {
+        if (typeof nPort !== "number") {
+            NotifyError(that, 'configServerForPriCloud', 'type of nPort is not number.');
+            return false;
+        }
 				that.url = "https://" + strAddress + ":" + nPort;
 			} else {
 				that.url = "https://" + strAddress;
 			}
 		} else {
 			if (nPort) {
+        if (typeof nPort !== "number") {
+            NotifyError(that, 'configServerForPriCloud', 'type of nPort is not number.');
+            return false;
+        }
 				that.url = "http://" + strAddress + ":" + nPort;
 			} else {
 				that.url = "http://" + strAddress;
@@ -1199,6 +1273,10 @@
 	RTMaxKit.prototype.setLocalVideoEnable = function (bEnable) {
    		var that = this;
 
+      if (that.isJustAudio) {
+          NotifyError(that, 'setLocalVideoEnable', 'Audio mode is not allowed enabled local video');
+          return false;
+      }
    		if (typeof bEnable !== "boolean") {
 	       	NotifyError(that, 'setLocalVideoEnable', 'type of bEnable is not boolean.');
        		return false;
@@ -1321,7 +1399,7 @@
         		/**
          		 *  创建RTC服务连接结果
          		 *  nCode           错误码 4  参数非法
-     			**/
+             **/
         		that.emit('onRTCJoinTalkGroupFailed', 4);  // 参数非法
         		
          		NotifyError(that, 'joinRTC', 'strUserData is out of length.');
@@ -1583,7 +1661,7 @@
 
 	/**
 	 * 申请对讲
-	 * @param nPriority 申请抢麦用户的级别（0权限最大（数值越大，权限越小）；可以后台设置0-10之间的抢麦权限大小））
+	 * @param nPriority 申请抢麦用户的级别（0权限最大（数值越大，权限越小）；除0以外，可以后台设置0-10之间的抢麦权限大小））
 	 * @return 0: 调用OK  -1:未登录  -2:正在对讲中  -3: 资源还在释放中 -4: 操作太过频繁
 	 * 
 	 * 在对讲组中发言者需申请对讲，申请对讲成功将会收到```onRTCApplyTalkOk```回调，反之收到```onRTCTalkClosed```结束对讲回调。
@@ -1617,7 +1695,7 @@
 	
 	/** 
 	 * 取消对讲
-	 * 申请对讲成功之后，主动结束（广播)对讲。
+	 * 申请对讲成功（onRTCApplyTalkOk）之后，主动结束（广播)对讲。
 	**/
 	RTMaxKit.prototype.cancelTalk = function () {
 		var that = this;
@@ -1643,6 +1721,7 @@
 		{
 			that.isTalkOn = false;
 			that.emit("onRTCTalkClosed", 0, that.userId, that.userData);
+			//that.releaseStream();
 		}
 		
 		return true;
@@ -1717,7 +1796,8 @@
 	/**
 	 *	取消强插对讲
 	 *
-	 *	结束强插对讲，对方将收到```onRTCTalkP2PClosed```回调
+	 *	结束强插对讲，对方将收到```onRTCTalkP2POff```回调
+   *	说明：控制台关闭强插对讲，该用户会收到onRTCTalkP2POff
 	**/
 	RTMaxKit.prototype.closeP2PTalk = function () {
 		var that = this;
@@ -1734,8 +1814,8 @@
 	}
 
 	/**
-	 * 打断(对讲组的)对讲
-	 * 
+	 * 打断对讲组的所有对讲
+	 * 当用户正在强插时打断对讲不生效
 	 * 打断指定对讲组中的对讲，正在发言的人讲被强制结束对讲，不能用于打断强插对讲（因为对讲与强插对讲互不影响）
 	**/
 	RTMaxKit.prototype.breakTalk = function (strGroupId) {
@@ -1763,8 +1843,8 @@
 	}
 
 	/**
-	 * 打断某个用户的通话与强插对讲
-   *
+	 * 打断某个用户的通话、对讲、强插对讲
+   *	打断通话，包括强插
 	 *	通话强拆，比如是A是发起者，B和C是被叫。
 	 * 	1，如果我强拆A，则这个会话就结束
 	 * 	2，如果我强插B或C，这个会话还会继续，只是B或C退出了而已
@@ -1912,6 +1992,7 @@
 			delete that.callTypeMap[that.callId];
 			that.callId = "";
 		}
+		//that.releaseStream();
 		
 		Logcat("Do endCall ......");
 		XMLHttp.queueReq("POST", that.url + "/anyapi/v1/talk_end_call?DyncID=" + that.my_id + "&AnyrtcID=" + that.anyrtcId + "&PeerId=" + strPeerUserId, null, function (obj) {});
@@ -1940,6 +2021,7 @@
 		if (!IsNull(that.callId) || that.callType != CT_INIT || that.isTalkApplying || that.isTalkOn || that.isTalkP2P)
 		{
 			NotifyError(that, 'acceptCall', 'There has session is on, release it before acceptCall.');
+			that.rejectCall(strCallId);
 			return false;
 		}
 		if (that.callTypeMap[strCallId] == undefined)
@@ -1954,6 +2036,7 @@
 		else {
 			that.callType = CT_AUDIO;
 		}
+
 		Logcat("Do acceptCall ......");
 		XMLHttp.queueReq("POST", that.url + "/anyapi/v1/talk_accept_call?DyncID=" + that.my_id + "&AnyrtcID=" + that.anyrtcId + "&CallId=" + strCallId, null, function (obj) {});
 	
@@ -2005,9 +2088,10 @@
 		Logcat("Do leaveCall ......");
 		XMLHttp.queueReq("POST", that.url + "/anyapi/v1/talk_leave_call?DyncID=" + that.my_id + "&AnyrtcID=" + that.anyrtcId + "&CallId=" + that.callId, null, function (obj) {});
 		
-		that.callId = "";
+		delete that.callTypeMap[that.callId];
 		that.callType = CT_INIT;
-		
+		that.callId = "";
+		//that.releaseStream();
 		return true;
 	}
 
@@ -2118,7 +2202,7 @@
 	 * @params strUserName           用户昵称
 	 * @params strUserHeaderUrl      业务平台的用户头像       （Max 512字节）
 	 * @params strContent            业务平台自定义消息内容   （Max 1024字节）
-	 * 
+	 * 返回值 boolean
 	 * 群组广播消息，组内人员将会收到```onRTCUserMessage```回调
 	**/
 	RTMaxKit.prototype.sendUserMessage = function (strUserName, strUserHeaderUrl, strContent) {

@@ -559,9 +559,7 @@ export default {
       console.log('onRTCMakeCall', strCallId, strCallType, strUserId, strUserData);
 
       //设置被叫方身份
-      console.log(123)
-      console.log(that.callDialog)
-      if( that.callDialog == true){
+      if(that.callDialog == true){
         that.rtcMax.rejectCall(strCallId);
       }else{
         that.addLog('null', '用户'+strUserId + '邀请您进行' + (strCallType == 0 ? '视频' : '音频') + '通话');

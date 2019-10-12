@@ -62,7 +62,6 @@
 		this.pcPuber = null;
 		this.pcPuberChanId = "";//当前pc对应的chanId
 		this.pcPuberPubId = "";//当前pc对应的pubId
-		this.sender = []; //beta
 		//本地media stream
 		this.localMediaStream = null;
     
@@ -329,7 +328,14 @@
 					sdpMLineIndex: jsBody.sdpMLineIndex,
 					candidate: jsBody.candidate
 				});
-				peerConn.addIceCandidate(candidate);
+				if (navigator.userAgent.indexOf('Firefox') > -1) {//firfox 判断(talk 监看不出像)
+					peerConn.addIceCandidate(candidate);
+				}
+				peerConn.addIceCandidate(candidate, function () {
+					console.log("peerConn.addIceCandidate  OK");
+				}, function (error) {
+					console.log("peerConn.addIceCandidate err: " + error);
+				});
 			}
 		}
 	};
@@ -661,7 +667,15 @@
 					break;
 				}
 			}
-			that.emit('onRemoteStream', evt.streams[0], pubId);
+      that.emit('onRemoteStream', evt.streams[0], pubId);
+
+			if (evt.track.kind === "video") {
+				// pcVideoTrack = evt.track;
+				that.emit('onRemoteVideoStream', evt.streams && evt.streams[0], pubId);
+			} else if (evt.track.kind === "audio") {
+				// pcAudioTrack = evt.track;
+				that.emit('onRemoteAudioStream', evt.streams && evt.streams[0], pubId);
+			}
 		};
 
 		pc.ondatachannel = function (evt) {
