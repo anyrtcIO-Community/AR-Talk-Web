@@ -12,7 +12,19 @@
       </div>
       <!-- 视频监控 -->
       <div class="video_view">
-        <videoPlayer v-for="(item, index) in monitorVideoData" :key="index" :vSrc="item.src" :uId="item.uid" :pId="item.pid" :bClose="item.needClose" @closeVideo="handleCloseMonitor"></videoPlayer>
+        <!-- <videoPlayer v-for="(item, index) in monitorVideoData" :key="index" :vSrc="item.src" :uId="item.uid" :pId="item.pid" :bClose="item.needClose" @closeVideo="handleCloseMonitor"></videoPlayer> -->
+        <div class="video" v-for="(item, index) in monitorVideoData" :key="index">
+          <div class="video-header">
+            <span v-if="item.uid == ''">监看方</span>
+            <span v-if="item.uid != ''">{{item.needClose == true ? '监看' : '上报'}} (ID : {{ item.uid }})</span>
+            <span class="video-header_close" v-if="item.needClose" @click="handleCloseMonitor(item.uid, item.pid)">关闭</span>
+          </div>
+
+          <div :id="`videoBox${item.pid}`" style="width: 100%; height: 112px; overflow: hidden;">
+
+          </div>
+          <!-- <video :src="videoSrc" autoplay></video> -->
+        </div>
       </div>
       <!-- 控制区域 -->
       <div class="control_view">
@@ -62,7 +74,19 @@
         <div class="call-dialog_content">
           <video :src="localVideoSrc" autoplay muted></video>
           <div class="invite-call">
-            <videoPlayer v-for="(item, index) in callVideoData" :key="index" :vSrc="item.src" :uId="item.uid" :pId="item.pid" @closeVideo="handleEndCall"></videoPlayer>
+            <!-- <videoPlayer v-for="(item, index) in callVideoData" :key="index" :vSrc="item.src" :uId="item.uid" :pId="item.pid" @closeVideo="handleEndCall"></videoPlayer> -->
+            <div class="video" v-for="(item, index) in callVideoData" :key="index">
+              <div class="video-header">
+                <span v-if="item.uid == ''">监看方</span>
+                <span v-if="item.uid != ''">{{item.needClose == true ? '监看' : '上报'}} (ID : {{ item.uid }})</span>
+                <span class="video-header_close" v-if="item.needClose" @click="handleEndCall(item.uid, item.pid)">关闭</span>
+              </div>
+
+              <div :id="`videoBox${item.pid}`" style="width: 100%; height: 112px; overflow: hidden;">
+
+              </div>
+              <!-- <video :src="videoSrc" autoplay></video> -->
+        </div>
           </div>
         </div>
       </div>
@@ -378,6 +402,10 @@ export default {
             pid: strPubId,
             uid: that.monitorUserId,
             needClose: needCloseBtn
+          });
+          that.$nextTick(() => {
+            let el = document.getElementById(`videoBox${strPubId}`);
+            el && el.appendChild(videoRender);
           })
           break;
         case 3://音频呼叫
@@ -386,6 +414,10 @@ export default {
             src: '',
             pid: strPubId,
             uid: that.callUserId
+          });
+          that.$nextTick(() => {
+            let el = document.getElementById(`videoBox${strPubId}`);
+            el && el.appendChild(videoRender);
           })
           break;
       }
@@ -421,30 +453,30 @@ export default {
     });
 
     //设置远程流
-    rtcMax.on('onRTCRemoteStream', function (stream, strPubId, nType) {
-      console.log("onRTCRemoteStream **********************", strPubId, nType);
-      switch (nType) {
-        case 0://对讲
-        case 1://强插对讲
-          that.rtcMax.setRTCVideoRender(stream, document.getElementById(strPubId));
-          break;
-        case 2://视频监看
-          that.monitorVideoData.map(item=> {
-            if (item.pid === strPubId) {
-              item.src = URL.createObjectURL(stream);
-            }
-          });
-          break;
-        case 3:
-        case 4:
-          that.callVideoData.map(item=> {
-            if (item.pid === strPubId) {
-              item.src = URL.createObjectURL(stream);
-            }
-          });
-          break;
-      }
-    });
+    // rtcMax.on('onRTCRemoteStream', function (stream, strPubId, nType) {
+    //   console.log("onRTCRemoteStream **********************", strPubId, nType);
+    //   switch (nType) {
+    //     case 0://对讲
+    //     case 1://强插对讲
+    //       that.rtcMax.setRTCVideoRender(stream, document.getElementById(strPubId));
+    //       break;
+    //     case 2://视频监看
+    //       that.monitorVideoData.map(item=> {
+    //         if (item.pid === strPubId) {
+    //           item.src = URL.createObjectURL(stream);
+    //         }
+    //       });
+    //       break;
+    //     case 3:
+    //     case 4:
+    //       that.callVideoData.map(item=> {
+    //         if (item.pid === strPubId) {
+    //           item.src = URL.createObjectURL(stream);
+    //         }
+    //       });
+    //       break;
+    //   }
+    // });
 
     //收到消息
     rtcMax.on('onRTCUserMessage', function (strUserId, strUserName, strUserHeadUrl, strUserData) {
@@ -608,4 +640,39 @@ export default {
 ::-webkit-scrollbar {/*隐藏滚轮*/
   display: none;
 }
+
+.video,
+  .video-header {
+    position: relative;
+  }
+
+  .video {
+    width: 200px;
+  }
+
+  .video-header {
+    padding: 0 10px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 12px;
+    background-color: #fff;
+  }
+
+  .video-header:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+
+  video {
+    width: 100%;
+    height: 112px;
+    object-fit: contain;
+    background-color: #000;
+  }
+
+  .video-header_close {
+    float: right;
+    cursor: pointer;
+  }
 </style>
