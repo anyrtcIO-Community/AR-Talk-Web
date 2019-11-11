@@ -307,13 +307,13 @@ export default {
     let that = this;
     
     let rtcMax = that.rtcMax = new RTMaxKit();
-
-    //初始化SDK
-    rtcMax.initEngineWithAnyRTCInfo(config.DEV_ID, config.APP_ID, config.APP_KEY, config.APP_TOKEN, config.APP_DOMAIN);
+    
     //配置服务器地址
     if (config.RTC_SERVER_URL) {
       rtcMax.configServerForPriCloud(config.RTC_SERVER_URL, config.RTC_SERVER_PORT);
     }
+    //初始化SDK
+    rtcMax.initEngineWithAnyRTCInfo(config.DEV_ID, config.APP_ID, config.APP_KEY, config.APP_TOKEN, config.APP_DOMAIN);
     //打开摄像头
     rtcMax.setLocalVideoCapturer();
     //创建本地视频流成功
