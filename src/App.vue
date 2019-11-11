@@ -96,6 +96,7 @@
 </template>
 
 <script>
+import config from './conf/config.js';
 import utils from './mixins/utils';
 import videoPlayer from './components/video.vue';
 
@@ -306,17 +307,15 @@ export default {
     let that = this;
     
     let rtcMax = that.rtcMax = new RTMaxKit();
-    //前往平台获取配置开发者信息
-    let DEV_ID = "";
-    let APP_ID = "";
-    let APP_KEY = "";
-    let APP_TOKEN = "";
-    let APP_DOMAIN = "";
 
-    rtcMax.initEngineWithAnyRTCInfo(DEV_ID, APP_ID, APP_KEY, APP_TOKEN, APP_DOMAIN);
-    rtcMax.configServerForPriCloud("pro.anyrtc.io", null);
+    //初始化SDK
+    rtcMax.initEngineWithAnyRTCInfo(config.DEV_ID, config.APP_ID, config.APP_KEY, config.APP_TOKEN, config.APP_DOMAIN);
+    //配置服务器地址
+    if (config.RTC_SERVER_URL) {
+      rtcMax.configServerForPriCloud(config.RTC_SERVER_URL, config.RTC_SERVER_PORT);
+    }
+    //打开摄像头
     rtcMax.setLocalVideoCapturer();
-
     //创建本地视频流成功
     rtcMax.on("onSetLocalVideoCapturerResult", function (code, element, stream) {
       if (code == 0) {
