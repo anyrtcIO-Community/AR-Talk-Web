@@ -42,7 +42,7 @@ npm run build
 ## 体验 DEMO
 [立即体验](https://ar.teameeting.cn/)
 
-## Android版
+## iOS版
 
 [AR-Talk-iOS](https://github.com/anyRTC/AR-Talk-iOS)
 
