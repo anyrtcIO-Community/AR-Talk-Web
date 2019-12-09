@@ -40,7 +40,7 @@ npm run build
 [更多详细方法使用，请查看API文档](https://www.anyrtc.io/resoure)
 
 ## 体验 DEMO
-[立即体验](https://ar.teameeting.cn/)
+[立即体验](https://demos.anyrtc.io/ar-talk/)
 
 ## iOS版
 
